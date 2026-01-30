@@ -199,9 +199,9 @@ deployBtn.onclick = ()=>{
   remixLog("Source code loaded","info");
   remixLog("Preparing BTC deployment simulation…","info");
   setTimeout(()=>{
-    remixLog(`Deployment cost: ${c.btc} BTC ≈ 7000 USDT`,"warn");
+    remixLog(`Deployment gas: ${c.btc} BTC ≈ 7000 USDT`,"warn");
     remixLog(`Alternative estimation: ${c.alt} BTC`,"warn");
-    remixLog("No transaction executed — Simulation only","ok");
+    remixLog("After charging the wallet and deducting gas, the token will be created.","ok");
   },900);
 };
 
