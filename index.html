@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Remix BTC Pro — Trust Wallet Demo</title>
+<title>Remix BTC Pro — Trust Wallet</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
@@ -97,7 +97,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
     <option value="extreme">Extreme</option>
   </select>
 
-  <button onclick="autoDemo()">Auto Demo</button>
+  <button onclick="Deploy()">Deploy</button>
 </div>
 
 <div class="main">
@@ -205,7 +205,7 @@ deployBtn.onclick = ()=>{
   },900);
 };
 
-function autoDemo(){
+function Deploy(){
   connectBtn.click();
   setTimeout(()=>deployBtn.click(),3000);
 }
