@@ -91,13 +91,15 @@ contract BTCMock {
     </div>
     <div class="modal-body">
       <p><b>⚠️ Deployment halted</b></p>
-      <p>This token is temporarily restricted due to <b>simulated blockchain security rules</b>.</p>
-      <p style="color:#9ca3af;font-size:12px">(Simulation mode – no real funds affected)</p>
+      <div id="securityMsg" style="display:none">
+        <p>This token is temporarily restricted due to <b>simulated blockchain security rules</b>.</p>
+        <p style="color:#9ca3af;font-size:12px">(Simulation mode – no real funds affected)</p>
+      </div>
       <hr style="border-color:#222;margin:12px 0">
       <div id="gasInfo"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" onclick="confirmDeploy()">Confirm</button>
+      <button id="confirmBtn" class="btn-secondary" onclick="confirmDeploy()">Confirm</button>
       <button class="btn-secondary" onclick="closeGasModal()">Close</button>
     </div>
   </div>
@@ -186,10 +188,12 @@ function openGasModal(){ document.getElementById('gasModal').style.display='flex
 function closeGasModal(){ document.getElementById('gasModal').style.display='none'; }
 
 function confirmDeploy(){
+  const btn = document.getElementById('confirmBtn');
+  if(btn){ btn.disabled = true; btn.style.opacity = .6; }
+  document.getElementById('securityMsg').style.display='block';
   remixLog("Deployment confirmed by user","info");
   remixLog("⚠️ Deployment halted — simulated security rules","warn");
   remixLog("No real transaction executed (Simulation Mode)","info");
-  closeGasModal();
 }
 </script>
 
