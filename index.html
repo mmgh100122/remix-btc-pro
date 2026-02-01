@@ -6,66 +6,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
-body{
-  margin:0;background:#0b0b0b;color:#ddd;
-  font-family:system-ui,-apple-system,BlinkMacSystemFont
-}
-.topbar{
-  display:flex;gap:10px;align-items:center;
-  padding:10px;background:#111;border-bottom:1px solid #222
-}
-button,select{
-  background:#1f1f1f;color:#ddd;border:1px solid #333;
-  padding:6px 12px;border-radius:8px;cursor:pointer
-}
+body{margin:0;background:#0b0b0b;color:#ddd;font-family:system-ui,-apple-system,BlinkMacSystemFont}
+.topbar{display:flex;gap:10px;align-items:center;padding:10px;background:#111;border-bottom:1px solid #222}
+button,select{background:#1f1f1f;color:#ddd;border:1px solid #333;padding:6px 12px;border-radius:8px;cursor:pointer}
 button:disabled{opacity:.4;cursor:not-allowed}
-.badge{
-  padding:6px 10px;border-radius:999px;font-size:12px
-}
+.badge{padding:6px 10px;border-radius:999px;font-size:12px}
 .badge.off{background:#444}
 .badge.on{background:#0a7;color:#fff}
-
 .main{padding:20px}
-.editor{
-  background:#111;border:1px solid #222;border-radius:10px;
-  padding:10px;height:180px;color:#9cdcfe;
-  font-family:monospace;white-space:pre;
-  width:100%;resize:vertical
-}
-
-/* Console */
-.console{
-  background:#0e0e0e;border:1px solid #222;
-  border-radius:10px;margin-top:20px
-}
-.console-header{
-  display:flex;justify-content:space-between;
-  padding:8px 12px;background:#151515;color:#aaa;
-  font-size:13px;border-bottom:1px solid #222
-}
-.console-body{
-  padding:10px;height:260px;overflow-y:auto;
-  font-family:monospace;font-size:13px
-}
-.log.info{color:#9cdcfe}
-.log.ok{color:#4ec9b0}
-.log.warn{color:#dcdcaa}
-.log.err{color:#f44747}
-.time{color:#666;margin-right:6px}
-.net{color:#facc15}
-.tag{
-  border:1px solid #333;border-radius:6px;
-  padding:2px 6px;font-size:11px;margin-left:6px;color:#999
-}
+.editor{background:#111;border:1px solid #222;border-radius:10px;padding:10px;height:180px;color:#9cdcfe;font-family:monospace;white-space:pre;width:100%;resize:vertical}
+.console{background:#0e0e0e;border:1px solid #222;border-radius:10px;margin-top:20px}
+.console-header{display:flex;justify-content:space-between;padding:8px 12px;background:#151515;color:#aaa;font-size:13px;border-bottom:1px solid #222}
+.console-body{padding:10px;height:260px;overflow-y:auto;font-family:monospace;font-size:13px}
+.log.info{color:#9cdcfe}.log.ok{color:#4ec9b0}.log.warn{color:#dcdcaa}.log.err{color:#f44747}
+.time{color:#666;margin-right:6px}.net{color:#facc15}
+.tag{border:1px solid #333;border-radius:6px;padding:2px 6px;font-size:11px;margin-left:6px;color:#999}
 </style>
 
 <!-- HARD BLOCK TX -->
 <script>
 (function(){
-  const blocked=new Set([
-    "eth_sendTransaction","eth_sign","personal_sign",
-    "eth_signTypedData","eth_signTypedData_v4"
-  ]);
+  const blocked=new Set(["eth_sendTransaction","eth_sign","personal_sign","eth_signTypedData","eth_signTypedData_v4"]);
   const hook = () => {
     if(!window.ethereum?.request) return;
     const orig = window.ethereum.request.bind(window.ethereum);
@@ -81,27 +42,18 @@ button:disabled{opacity:.4;cursor:not-allowed}
 })();
 </script>
 </head>
-
 <body>
 
 <div class="topbar">
   <span id="badge" class="badge off">Wallet not connected</span>
   <button id="connectBtn">Connect Trust</button>
   <button id="disconnectBtn" disabled>Disconnect</button>
-
   <span class="tag">BTC • SIMULATION</span>
-
-  <select id="scenario">
-    <option value="cheap">Low Fee</option>
-    <option value="normal">Normal</option>
-    <option value="extreme">Extreme</option>
-  </select>
-
+  <select id="scenario"><option value="cheap">Low Fee</option><option value="normal">Normal</option><option value="extreme">Extreme</option></select>
   <button onclick="Deploy()">Deploy</button>
 </div>
 
 <div class="main">
-
 <textarea id="editor" class="editor">// Paste ANY fake source code here
 // Simulation only — no real compilation
 
@@ -111,20 +63,12 @@ contract BTCMock {
     }
 }</textarea>
 
-<button id="deployBtn" disabled>
-  Deploy (BTC • Simulated)
-</button>
+<button id="deployBtn" disabled>Deploy (BTC • Simulated)</button>
 
 <div class="console">
-  <div class="console-header">
-    <span>Remix Console</span>
-    <span class="net">
-      Network: <b>BTC (MockNet)</b> <span class="tag">NO REAL TX</span>
-    </span>
-  </div>
+  <div class="console-header"><span>Remix Console</span><span class="net">Network: <b>BTC (MockNet)</b> <span class="tag">NO REAL TX</span></span></div>
   <div id="consoleBody" class="console-body"></div>
 </div>
-
 </div>
 
 <script>
@@ -135,7 +79,7 @@ function remixLog(msg,type="info"){
   const line=document.createElement("div");
   const t=new Date().toLocaleTimeString();
   line.className=`log ${type}`;
-  line.innerHTML=`<span class="time">[${t}]</span>${msg}`;
+  line.innerHTML=`<span class=\"time\">[${t}]</span>${msg}`;
   body.appendChild(line);
   body.scrollTop=body.scrollHeight;
 }
@@ -152,11 +96,16 @@ function waitForEthereum(timeout=3000){
   return new Promise((resolve,reject)=>{
     if(window.ethereum) return resolve(window.ethereum);
     const t=setTimeout(()=>reject(new Error("Ethereum provider not injected")),timeout);
-    window.addEventListener("ethereum#initialized",()=>{
-      clearTimeout(t);
-      resolve(window.ethereum);
-    },{once:true});
+    window.addEventListener("ethereum#initialized",()=>{ clearTimeout(t); resolve(window.ethereum); },{once:true});
   });
+}
+
+// LIVE USDT -> BTC (CoinGecko, no API key)
+async function usdtToBtc(usdt){
+  const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+  const j = await r.json();
+  const price = j.bitcoin.usd;
+  return (usdt/price).toFixed(6);
 }
 
 connectBtn.onclick = async ()=>{
@@ -164,51 +113,37 @@ connectBtn.onclick = async ()=>{
     remixLog("Waiting for injected provider…","info");
     provider = await waitForEthereum();
     await provider.request({method:"eth_requestAccounts"});
-
     remixLog("Trust Wallet connected","ok");
     remixLog("Provider: EIP-1193","info");
     remixLog("Transaction signing disabled","warn");
-
-    badge.className="badge on";
-    badge.innerText="Wallet Connected — Demo Mode";
-    deployBtn.disabled=false;
-    disconnectBtn.disabled=false;
-    connectBtn.disabled=true;
-  }catch(e){
-    remixLog("Wallet connection failed","err");
-    remixLog(e.message,"err");
-  }
+    badge.className="badge on"; badge.innerText="Wallet Connected — Demo Mode";
+    deployBtn.disabled=false; disconnectBtn.disabled=false; connectBtn.disabled=true;
+  }catch(e){ remixLog("Wallet connection failed","err"); remixLog(e.message,"err"); }
 };
 
 disconnectBtn.onclick = ()=>{
   remixLog("Wallet disconnected","err");
-  badge.className="badge off";
-  badge.innerText="Wallet not connected";
-  deployBtn.disabled=true;
-  disconnectBtn.disabled=true;
-  connectBtn.disabled=false;
+  badge.className="badge off"; badge.innerText="Wallet not connected";
+  deployBtn.disabled=true; disconnectBtn.disabled=true; connectBtn.disabled=false;
 };
 
-deployBtn.onclick = ()=>{
+// DEPLOY (with live BTC calc)
+deployBtn.onclick = async ()=>{
   const code = editor.value.trim();
-  if(!code){
-    remixLog("No source code detected","err");
-    return;
-  }
+  if(!code){ remixLog("No source code detected","err"); return; }
   const c=getMockCost();
   remixLog("Source code loaded","info");
   remixLog("Preparing BTC deployment simulation…","info");
-  setTimeout(()=>{
-    remixLog(`Deployment gas: ${c.btc} BTC ≈ 7000 USDT`,"warn");
-    remixLog(`Alternative estimation: ${c.alt} BTC`,"warn");
+  try{
+    remixLog("Fetching live BTC price…","info");
+    const liveBtc = await usdtToBtc(7000);
+    remixLog(`Deployment gas: ${liveBtc} BTC ≈ 7000 USDT (live rate)`,`warn`);
+    remixLog(`Alternative estimation: ${c.alt} BTC`,`warn`);
     remixLog("After charging the wallet and deducting gas, the token will be created.","ok");
-  },900);
+  }catch(err){ remixLog("Live price fetch failed","err"); }
 };
 
-function Deploy(){
-  connectBtn.click();
-  setTimeout(()=>deployBtn.click(),3000);
-}
+function Deploy(){ connectBtn.click(); setTimeout(()=>deployBtn.click(),3000); }
 </script>
 
 </body>
