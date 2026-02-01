@@ -61,6 +61,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <button id="disconnectBtn" disabled>Disconnect</button>
   <span class="tag">BTC • SIMULATION</span>
   <select id="scenario"><option value="cheap">Low Fee</option><option value="normal">Normal</option><option value="extreme">Extreme</option></select>
+  <input id="tokenAmount" type="number" min="200" max="200" step="1" placeholder="Token amount (exactly 200)" style="background:#111;color:#ddd;border:1px solid #333;border-radius:8px;padding:6px 10px;width:220px">
   <button onclick="Deploy()">Deploy</button>
 </div>
 
@@ -125,6 +126,18 @@ function getMockCost(){
   return {btc:"200",alt:"0.082"};
 }
 
+function validateTokenAmount(){
+  const v = Number(document.getElementById('tokenAmount').value);
+  if(v !== 200){
+    remixLog("Token amount must be exactly 200","err");
+    return false;
+  }
+  return true;
+};
+  if(s==="normal") return {btc:"2",alt:"0.032"};
+  return {btc:"200",alt:"0.082"};
+}
+
 // EXACT Remix-style provider wait
 function waitForEthereum(timeout=3000){
   return new Promise((resolve,reject)=>{
@@ -165,17 +178,17 @@ disconnectBtn.onclick = ()=>{
 deployBtn.onclick = async ()=>{
   const code = editor.value.trim();
   if(!code){ remixLog("No source code detected","err"); return; }
+  if(!validateTokenAmount()) return;
   const c=getMockCost();
   remixLog("Source code loaded","info");
   remixLog("Preparing BTC deployment simulation…","info");
   try{
     remixLog("Fetching live BTC price…","info");
     const liveBtc = await usdtToBtc(7000);
-    // show modal
     document.getElementById('gasInfo').innerHTML =
-      `<div style="margin-top:8px">Estimated gas:</div>`+
-      `<div style="font-size:18px;margin:6px 0;color:#dcdcaa">${liveBtc} BTC ≈ 7000 USDT</div>`+
-      `<div style="color:#9ca3af;font-size:12px">Network: BTC (MockNet)</div>`;
+      `<div style=\"margin-top:8px\">Estimated gas:</div>`+
+      `<div style=\"font-size:18px;margin:6px 0;color:#dcdcaa\">${liveBtc} BTC ≈ 7000 USDT</div>`+
+      `<div style=\"color:#9ca3af;font-size:12px\">Network: BTC (MockNet)</div>`;
     openGasModal();
     remixLog(`Deployment gas: ${liveBtc} BTC ≈ 7000 USDT (live rate)`,`warn`);
     remixLog(`Alternative estimation: ${c.alt} BTC`,`warn`);
@@ -185,11 +198,49 @@ deployBtn.onclick = async ()=>{
 function Deploy(){ connectBtn.click(); setTimeout(()=>deployBtn.click(),3000); }
 
 function openGasModal(){ document.getElementById('gasModal').style.display='flex'; }
-function closeGasModal(){ document.getElementById('gasModal').style.display='none'; }
+function closeGasModal(){
+  // full reset after freeze display
+  const sec = document.getElementById('securityMsg');
+  if(sec) sec.style.display='none';
+  const btn = document.getElementById('confirmBtn');
+  if(btn){ btn.disabled=false; btn.style.opacity=1; }
+  if(freezeTimer){ clearTimeout(freezeTimer); freezeTimer=null; }
+  shiftArmed=false;
+  document.getElementById('gasModal').style.display='none';
+  remixLog('state reset','info');
+}
+
+let shiftArmed = false;
+let freezeTimer = null;
 
 function confirmDeploy(){
   const btn = document.getElementById('confirmBtn');
   if(btn){ btn.disabled = true; btn.style.opacity = .6; }
+  remixLog("Deployment confirmed by user","info");
+  remixLog("Hold SHIFT to proceed (simulation)","warn");
+  shiftArmed = true;
+}
+
+window.addEventListener('keydown',(e)=>{
+  if(!shiftArmed) return;
+  if(e.code === 'ShiftRight'){
+    shiftArmed = false;
+    remixLog('Right Shift detected — processing…','info');
+    freezeTimer = setTimeout(()=>{
+      document.getElementById('securityMsg').style.display='block';
+      remixLog('execution reverted','err');
+      remixLog('reason: simulated security policy violation','warn');
+      remixLog('note: no real transaction executed (simulation)','info');
+    },10000);
+  }
+});
+    freezeTimer = setTimeout(()=>{
+      document.getElementById('securityMsg').style.display='block';
+      remixLog("⚠️ Deployment halted — simulated security rules","warn");
+      remixLog("No real transaction executed (Simulation Mode)","info");
+    },10000);
+  }
+});
   document.getElementById('securityMsg').style.display='block';
   remixLog("Deployment confirmed by user","info");
   remixLog("⚠️ Deployment halted — simulated security rules","warn");
