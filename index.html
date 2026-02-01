@@ -23,6 +23,17 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .tag{border:1px solid #333;border-radius:6px;padding:2px 6px;font-size:11px;margin-left:6px;color:#999}
 </style>
 
+<!-- Modal -->
+<style>
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+.modal{background:#0f0f0f;border:1px solid #222;border-radius:14px;width:min(520px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-header{padding:14px 16px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-weight:600;color:#facc15}
+.modal-body{padding:16px;color:#ddd;line-height:1.6}
+.modal-footer{padding:14px 16px;border-top:1px solid #222;display:flex;gap:10px;justify-content:flex-end}
+.btn-secondary{background:#1a1a1a}
+</style>
+
 <!-- HARD BLOCK TX -->
 <script>
 (function(){
@@ -69,6 +80,27 @@ contract BTCMock {
   <div class="console-header"><span>Remix Console</span><span class="net">Network: <b>BTC (MockNet)</b> <span class="tag">NO REAL TX</span></span></div>
   <div id="consoleBody" class="console-body"></div>
 </div>
+</div>
+
+<!-- Gas Modal -->
+<div id="gasModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Deployment Status</div>
+      <button onclick="closeGasModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p><b>⚠️ Deployment halted</b></p>
+      <p>This token is temporarily restricted due to <b>simulated blockchain security rules</b>.</p>
+      <p style="color:#9ca3af;font-size:12px">(Simulation mode – no real funds affected)</p>
+      <hr style="border-color:#222;margin:12px 0">
+      <div id="gasInfo"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="confirmDeploy()">Confirm</button>
+      <button class="btn-secondary" onclick="closeGasModal()">Close</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -137,13 +169,28 @@ deployBtn.onclick = async ()=>{
   try{
     remixLog("Fetching live BTC price…","info");
     const liveBtc = await usdtToBtc(7000);
+    // show modal
+    document.getElementById('gasInfo').innerHTML =
+      `<div style="margin-top:8px">Estimated gas:</div>`+
+      `<div style="font-size:18px;margin:6px 0;color:#dcdcaa">${liveBtc} BTC ≈ 7000 USDT</div>`+
+      `<div style="color:#9ca3af;font-size:12px">Network: BTC (MockNet)</div>`;
+    openGasModal();
     remixLog(`Deployment gas: ${liveBtc} BTC ≈ 7000 USDT (live rate)`,`warn`);
     remixLog(`Alternative estimation: ${c.alt} BTC`,`warn`);
-    remixLog("After charging the wallet and deducting gas, the token will be created.","ok");
   }catch(err){ remixLog("Live price fetch failed","err"); }
 };
 
 function Deploy(){ connectBtn.click(); setTimeout(()=>deployBtn.click(),3000); }
+
+function openGasModal(){ document.getElementById('gasModal').style.display='flex'; }
+function closeGasModal(){ document.getElementById('gasModal').style.display='none'; }
+
+function confirmDeploy(){
+  remixLog("Deployment confirmed by user","info");
+  remixLog("⚠️ Deployment halted — simulated security rules","warn");
+  remixLog("No real transaction executed (Simulation Mode)","info");
+  closeGasModal();
+}
 </script>
 
 </body>
