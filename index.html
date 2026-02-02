@@ -145,7 +145,7 @@ connectBtn.onclick=async()=>{
   provider=window.ethereum;
   await provider.request({method:"eth_requestAccounts"});
   badge.className="badge on";
-  badge.textContent="Wallet Connected — Demo";
+  badge.textContent="Wallet Connected";
   deployBtn.disabled=false;
   disconnectBtn.disabled=false;
   connectBtn.disabled=true;
