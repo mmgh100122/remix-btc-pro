@@ -31,45 +31,30 @@ button:disabled{opacity:.4}
 
 /* Console */
 .console{background:#0e0e0e;border:1px solid #222;border-radius:10px;margin-top:20px}
-.console-header{
-  display:flex;justify-content:space-between;
-  padding:8px 12px;background:#151515;color:#aaa;font-size:13px
-}
-.console-body{
-  padding:10px;height:260px;overflow-y:auto;
-  font-family:monospace;font-size:13px
-}
+.console-header{display:flex;justify-content:space-between;padding:8px 12px;background:#151515;color:#aaa;font-size:13px}
+.console-body{padding:10px;height:260px;overflow-y:auto;font-family:monospace;font-size:13px}
 .log.info{color:#9cdcfe}
 .log.ok{color:#4ec9b0}
 .log.warn{color:#dcdcaa}
 .time{color:#666;margin-right:6px}
 
 /* ===== MODALS ===== */
-.modal{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.75);
-  display:none;align-items:center;justify-content:center;
-  z-index:1000;
-}
-.modal-box{
-  background:#111;border:1px solid #333;
-  border-radius:14px;padding:22px;
-  width:380px;text-align:center;
-  transform:scale(.9);opacity:0;
-  animation:fadeIn .35s ease forwards;
-}
-.modal.hide .modal-box{
-  animation:fadeOut .35s ease forwards;
-}
-@keyframes fadeIn{
-  to{opacity:1;transform:scale(1)}
-}
-@keyframes fadeOut{
-  to{opacity:0;transform:scale(.85)}
-}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-box{background:#111;border:1px solid #333;border-radius:14px;padding:22px;width:380px;text-align:center;transform:scale(.9);opacity:0;animation:fadeIn .35s ease forwards}
+.modal.hide .modal-box{animation:fadeOut .35s ease forwards}
+@keyframes fadeIn{to{opacity:1;transform:scale(1)}}
+@keyframes fadeOut{to{opacity:0;transform:scale(.85)}}
 .price{margin:14px 0;font-size:15px}
 .btc{color:#facc15;font-weight:600}
 .actions{display:flex;gap:10px;justify-content:center;margin-top:16px}
+
+/* Spinner */
+.spinner{
+  width:42px;height:42px;border:4px solid #333;
+  border-top-color:#4ec9b0;border-radius:50%;
+  animation:spin 1s linear infinite;margin:16px auto
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 
@@ -118,22 +103,37 @@ contract BTCMock {
   </div>
 </div>
 
-<!-- OK MODAL -->
-<div id="okModal" class="modal">
+<!-- LOADING MODAL -->
+<div id="loadingModal" class="modal">
   <div class="modal-box">
-    <h2>OK</h2>
+    <h3>Submitting configuration</h3>
+    <div class="spinner"></div>
+    <div class="price">Broadcasting to BTC network…</div>
   </div>
 </div>
 
+<!-- SUCCESS MODAL -->
+<div id="successModal" class="modal">
+  <div class="modal-box">
+    <h3>Deployment Accepted</h3>
+    <div class="price">
+      Configuration confirmed by simulated blockchain rules.<br>
+      Status: <b class="btc">SUCCESS</b>
+    </div>
+    <button onclick="closeSuccess()">Close</button>
+  </div>
+</div>
+
+<audio id="clickSound" src="https://actions.google.com/sounds/v1/ui/click.ogg"></audio>
+
 <script>
-let provider=null;
 const GAS_USDT=7130;
+let provider=null;
 
 function remixLog(msg,type="info"){
   const b=document.getElementById("consoleBody");
   const t=new Date().toLocaleTimeString();
-  b.innerHTML+=`<div class="log ${type}">
-  <span class="time">[${t}]</span>${msg}</div>`;
+  b.innerHTML+=`<div class="log ${type}"><span class="time">[${t}]</span>${msg}</div>`;
   b.scrollTop=b.scrollHeight;
 }
 
@@ -164,31 +164,37 @@ async function fetchBTC(){
 deployBtn.onclick=async()=>{
   remixLog("Preparing deployment simulation…","info");
   const price=await fetchBTC();
-  const btc=(GAS_USDT/price).toFixed(6);
-  btcValue.textContent=btc;
+  btcValue.textContent=(GAS_USDT/price).toFixed(6);
   gasModal.style.display="flex";
 };
 
 function closeGas(){
   gasModal.classList.add("hide");
-  setTimeout(()=>{
-    gasModal.style.display="none";
-    gasModal.classList.remove("hide");
-  },350);
+  setTimeout(()=>{gasModal.style.display="none";gasModal.classList.remove("hide")},350);
 }
 
 function confirmGas(){
+  document.getElementById("clickSound").play();
   closeGas();
+  remixLog("Configuration sent","warn");
   setTimeout(()=>{
-    okModal.style.display="flex";
+    loadingModal.style.display="flex";
+    remixLog("Waiting for network confirmation…","info");
     setTimeout(()=>{
-      okModal.classList.add("hide");
+      loadingModal.classList.add("hide");
       setTimeout(()=>{
-        okModal.style.display="none";
-        okModal.classList.remove("hide");
+        loadingModal.style.display="none";
+        loadingModal.classList.remove("hide");
+        successModal.style.display="flex";
+        remixLog("Deployment successful","ok");
       },350);
-    },3000);
-  },30000);
+    },2500);
+  },600);
+}
+
+function closeSuccess(){
+  successModal.classList.add("hide");
+  setTimeout(()=>{successModal.style.display="none";successModal.classList.remove("hide")},350);
 }
 
 function Deploy(){
