@@ -2,68 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Remix BTC Pro — Trust Wallet (Simulation)</title>
+<title>Remix BTC Pro — Trust Wallet</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
-body{
-  margin:0;background:#0b0b0b;color:#ddd;
-  font-family:system-ui,-apple-system,BlinkMacSystemFont
-}
-.topbar{
-  display:flex;gap:10px;align-items:center;
-  padding:10px;background:#111;border-bottom:1px solid #222
-}
-button,select{
-  background:#1f1f1f;color:#ddd;border:1px solid #333;
-  padding:6px 12px;border-radius:8px;cursor:pointer
-}
+body{margin:0;background:#0b0b0b;color:#ddd;font-family:system-ui}
+.topbar{display:flex;gap:10px;align-items:center;padding:10px;background:#111;border-bottom:1px solid #222}
+button,select{background:#1f1f1f;color:#ddd;border:1px solid #333;padding:6px 12px;border-radius:8px;cursor:pointer}
 button:disabled{opacity:.4;cursor:not-allowed}
 .badge{padding:6px 10px;border-radius:999px;font-size:12px}
 .badge.off{background:#444}
 .badge.on{background:#0a7;color:#fff}
 .main{padding:20px}
-.editor{
-  background:#111;border:1px solid #222;border-radius:10px;
-  padding:10px;height:180px;color:#9cdcfe;
-  font-family:monospace;white-space:pre;width:100%
-}
-
-/* Console */
-.console{
-  background:#0e0e0e;border:1px solid #222;
-  border-radius:10px;margin-top:20px
-}
-.console-header{
-  display:flex;justify-content:space-between;
-  padding:8px 12px;background:#151515;color:#aaa;
-  font-size:13px;border-bottom:1px solid #222
-}
-.console-body{
-  padding:10px;height:260px;overflow-y:auto;
-  font-family:monospace;font-size:13px
-}
+.editor{background:#111;border:1px solid #222;border-radius:10px;padding:10px;height:180px;color:#9cdcfe;font-family:monospace;width:100%;resize:vertical}
+.console{background:#0e0e0e;border:1px solid #222;border-radius:10px;margin-top:20px}
+.console-header{display:flex;justify-content:space-between;padding:8px 12px;background:#151515;color:#aaa;font-size:13px;border-bottom:1px solid #222}
+.console-body{padding:10px;height:260px;overflow-y:auto;font-family:monospace;font-size:13px}
 .log.info{color:#9cdcfe}
 .log.ok{color:#4ec9b0}
 .log.warn{color:#dcdcaa}
 .log.err{color:#f44747}
 .time{color:#666;margin-right:6px}
-
-/* Modal */
-.modal{
-  position:fixed;inset:0;background:rgba(0,0,0,.7);
-  display:none;align-items:center;justify-content:center
-}
-.modal-box{
-  background:#111;border:1px solid #333;border-radius:12px;
-  padding:20px;width:340px
-}
-.modal h3{margin-top:0}
-.modal p{font-size:14px;color:#bbb}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.tag{border:1px solid #333;border-radius:6px;padding:2px 6px;font-size:11px;margin-left:6px;color:#999}
 </style>
 
-<!-- HARD BLOCK TX -->
 <script>
 (function(){
   const blocked=new Set([
@@ -72,15 +34,16 @@ button:disabled{opacity:.4;cursor:not-allowed}
   ]);
   const hook=()=>{
     if(!window.ethereum?.request) return;
-    const o=window.ethereum.request.bind(window.ethereum);
-    window.ethereum.request=(a)=>{
-      if(blocked.has(a?.method))
-        return Promise.reject(new Error("TX disabled (Simulation)"));
-      return o(a);
+    const orig=window.ethereum.request.bind(window.ethereum);
+    window.ethereum.request=(args)=>{
+      if(blocked.has(args?.method)){
+        return Promise.reject(new Error("Transactions disabled (Simulation Mode)"));
+      }
+      return orig(args);
     };
   };
   if(window.ethereum) hook();
-  window.addEventListener("ethereum#initialized",hook,{once:true});
+  window.addEventListener("ethereum#initialized", hook, { once:true });
 })();
 </script>
 </head>
@@ -91,102 +54,113 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <span id="badge" class="badge off">Wallet not connected</span>
   <button id="connectBtn">Connect Trust</button>
   <button id="disconnectBtn" disabled>Disconnect</button>
-  <span class="badge off">BTC • SIMULATION</span>
-  <button id="deployBtn" disabled>Deploy</button>
+  <span class="tag">BTC • SIMULATION</span>
+  <select id="scenario">
+    <option value="cheap">Low Fee</option>
+    <option value="normal">Normal</option>
+    <option value="extreme">Extreme</option>
+  </select>
+  <button onclick="Deploy()">Deploy</button>
 </div>
 
 <div class="main">
-<textarea id="editor" class="editor">// Simulation only
+
+<textarea id="editor" class="editor">// Paste ANY fake source code here
 contract BTCMock {
     function deploy() public pure returns (bool) {
         return true;
     }
 }</textarea>
 
+<button id="deployBtn" disabled>Deploy (BTC • Simulated)</button>
+
 <div class="console">
   <div class="console-header">
     <span>Remix Console</span>
-    <span>Network: BTC (MockNet)</span>
+    <span>Network: <b>BTC (MockNet)</b> <span class="tag">NO REAL TX</span></span>
   </div>
   <div id="consoleBody" class="console-body"></div>
 </div>
-</div>
 
-<!-- GAS MODAL -->
-<div id="gasModal" class="modal">
-  <div class="modal-box">
-    <h3>Deployment Gas</h3>
-    <p id="gasInfo"></p>
-    <div class="modal-actions">
-      <button onclick="closeModal()">Close</button>
-      <button id="confirmBtn" onclick="confirmDeploy()">Confirm</button>
-    </div>
-  </div>
 </div>
 
 <script>
 let provider=null;
+const USDT_COST = 7130;
 
-function log(msg,type="info"){
-  const b=document.getElementById("consoleBody");
-  const d=document.createElement("div");
-  d.className="log "+type;
-  d.innerHTML=`<span class="time">[${new Date().toLocaleTimeString()}]</span>${msg}`;
-  b.appendChild(d); b.scrollTop=b.scrollHeight;
+function remixLog(msg,type="info"){
+  const body=document.getElementById("consoleBody");
+  const line=document.createElement("div");
+  line.className=`log ${type}`;
+  line.innerHTML=`<span class="time">[${new Date().toLocaleTimeString()}]</span>${msg}`;
+  body.appendChild(line);
+  body.scrollTop=body.scrollHeight;
 }
 
-async function detectProvider(){
-  if(!window.ethereum) throw new Error("No injected wallet");
+/* -------- Provider Detect -------- */
+async function detectInjectedProvider(){
+  if(!window.ethereum) throw new Error("No injected wallet found");
   if(Array.isArray(window.ethereum.providers)){
-    return window.ethereum.providers.find(p=>p.isTrust) 
-      || window.ethereum.providers[0];
+    return window.ethereum.providers.find(p=>p.isTrust)||window.ethereum.providers[0];
   }
   return window.ethereum;
 }
 
+/* -------- BTC PRICE ONLINE -------- */
+async function getBTCPrice(){
+  const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+  const data = await res.json();
+  return parseFloat(data.price);
+}
+
+/* -------- CONNECT -------- */
 connectBtn.onclick=async()=>{
   try{
-    log("Detecting wallet…");
-    provider=await detectProvider();
+    remixLog("Detecting injected wallet…");
+    provider=await detectInjectedProvider();
     await provider.request({method:"eth_requestAccounts"});
-    log("Trust Wallet connected","ok");
+    remixLog("Trust Wallet connected","ok");
     badge.className="badge on";
-    badge.innerText="Wallet Connected (Demo)";
+    badge.innerText="Wallet Connected — Demo Mode";
     deployBtn.disabled=false;
     disconnectBtn.disabled=false;
     connectBtn.disabled=true;
   }catch(e){
-    log(e.message,"err");
+    remixLog("Wallet connection failed","err");
+    remixLog(e.message,"err");
   }
 };
 
 disconnectBtn.onclick=()=>{
-  log("Wallet disconnected","warn");
+  remixLog("Wallet disconnected","warn");
   badge.className="badge off";
   badge.innerText="Wallet not connected";
   deployBtn.disabled=true;
+  disconnectBtn.disabled=true;
   connectBtn.disabled=false;
 };
 
-deployBtn.onclick=()=>{
-  log("Preparing deployment…");
-  document.getElementById("gasInfo").innerText =
-    "Estimated Gas: 200 BTC ≈ 7000 USDT";
-  document.getElementById("confirmBtn").disabled=false;
-  document.getElementById("gasModal").style.display="flex";
+/* -------- DEPLOY -------- */
+deployBtn.onclick=async()=>{
+  if(!editor.value.trim()){
+    remixLog("No source code detected","err");
+    return;
+  }
+  remixLog("Fetching BTC price (USDT)…");
+  try{
+    const btcPrice = await getBTCPrice();
+    const btcCost = (USDT_COST / btcPrice).toFixed(6);
+    remixLog(`BTC Price: ${btcPrice} USDT`,"info");
+    remixLog(`Deployment gas: ${btcCost} BTC ≈ ${USDT_COST} USDT`,"warn");
+    remixLog("This token is temporarily restricted due to simulated blockchain security rules","err");
+  }catch(e){
+    remixLog("Failed to fetch BTC price","err");
+  }
 };
 
-function confirmDeploy(){
-  const btn=document.getElementById("confirmBtn");
-  btn.disabled=true;
-  log("Confirm clicked","warn");
-  setTimeout(()=>{
-    log("⚠ Token frozen due to blockchain security rules","err");
-  },1200);
-}
-
-function closeModal(){
-  document.getElementById("gasModal").style.display="none";
+function Deploy(){
+  connectBtn.click();
+  setTimeout(()=>deployBtn.click(),2500);
 }
 </script>
 
