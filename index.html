@@ -6,46 +6,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
-body{margin:0;background:#0b0b0b;color:#ddd;font-family:system-ui}
-.topbar{display:flex;gap:10px;align-items:center;padding:10px;background:#111;border-bottom:1px solid #222}
-button,select{background:#1f1f1f;color:#ddd;border:1px solid #333;padding:6px 12px;border-radius:8px;cursor:pointer}
+body{
+  margin:0;background:#0b0b0b;color:#ddd;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont
+}
+.topbar{
+  display:flex;gap:10px;align-items:center;
+  padding:10px;background:#111;border-bottom:1px solid #222
+}
+button,select{
+  background:#1f1f1f;color:#ddd;border:1px solid #333;
+  padding:6px 12px;border-radius:8px;cursor:pointer
+}
 button:disabled{opacity:.4;cursor:not-allowed}
-.badge{padding:6px 10px;border-radius:999px;font-size:12px}
+.badge{
+  padding:6px 10px;border-radius:999px;font-size:12px
+}
 .badge.off{background:#444}
 .badge.on{background:#0a7;color:#fff}
+
 .main{padding:20px}
-.editor{background:#111;border:1px solid #222;border-radius:10px;padding:10px;height:180px;color:#9cdcfe;font-family:monospace;width:100%;resize:vertical}
-.console{background:#0e0e0e;border:1px solid #222;border-radius:10px;margin-top:20px}
-.console-header{display:flex;justify-content:space-between;padding:8px 12px;background:#151515;color:#aaa;font-size:13px;border-bottom:1px solid #222}
-.console-body{padding:10px;height:260px;overflow-y:auto;font-family:monospace;font-size:13px}
+.editor{
+  background:#111;border:1px solid #222;border-radius:10px;
+  padding:10px;height:180px;color:#9cdcfe;
+  font-family:monospace;white-space:pre;
+  width:100%;resize:vertical
+}
+
+/* Console */
+.console{
+  background:#0e0e0e;border:1px solid #222;
+  border-radius:10px;margin-top:20px
+}
+.console-header{
+  display:flex;justify-content:space-between;
+  padding:8px 12px;background:#151515;color:#aaa;
+  font-size:13px;border-bottom:1px solid #222
+}
+.console-body{
+  padding:10px;height:260px;overflow-y:auto;
+  font-family:monospace;font-size:13px
+}
 .log.info{color:#9cdcfe}
 .log.ok{color:#4ec9b0}
 .log.warn{color:#dcdcaa}
 .log.err{color:#f44747}
 .time{color:#666;margin-right:6px}
-.tag{border:1px solid #333;border-radius:6px;padding:2px 6px;font-size:11px;margin-left:6px;color:#999}
+.net{color:#facc15}
+.tag{
+  border:1px solid #333;border-radius:6px;
+  padding:2px 6px;font-size:11px;margin-left:6px;color:#999
+}
+
+/* Modal */
+.modal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;
+  z-index:1000
+}
+.modal-box{
+  background:#111;border:1px solid #333;
+  border-radius:12px;padding:20px;
+  width:360px;text-align:center
+}
+.modal-box h3{margin-top:0}
+.modal-box .price{font-size:15px;margin:10px 0}
+.modal-box .btc{color:#facc15}
 </style>
 
-<script>
-(function(){
-  const blocked=new Set([
-    "eth_sendTransaction","eth_sign","personal_sign",
-    "eth_signTypedData","eth_signTypedData_v4"
-  ]);
-  const hook=()=>{
-    if(!window.ethereum?.request) return;
-    const orig=window.ethereum.request.bind(window.ethereum);
-    window.ethereum.request=(args)=>{
-      if(blocked.has(args?.method)){
-        return Promise.reject(new Error("Transactions disabled (Simulation Mode)"));
-      }
-      return orig(args);
-    };
-  };
-  if(window.ethereum) hook();
-  window.addEventListener("ethereum#initialized", hook, { once:true });
-})();
-</script>
 </head>
 
 <body>
@@ -55,71 +84,80 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <button id="connectBtn">Connect Trust</button>
   <button id="disconnectBtn" disabled>Disconnect</button>
   <span class="tag">BTC • SIMULATION</span>
-  <select id="scenario">
-    <option value="cheap">Low Fee</option>
-    <option value="normal">Normal</option>
-    <option value="extreme">Extreme</option>
-  </select>
   <button onclick="Deploy()">Deploy</button>
 </div>
 
 <div class="main">
 
 <textarea id="editor" class="editor">// Paste ANY fake source code here
+// Simulation only
+
 contract BTCMock {
     function deploy() public pure returns (bool) {
         return true;
     }
 }</textarea>
 
-<button id="deployBtn" disabled>Deploy (BTC • Simulated)</button>
+<button id="deployBtn" disabled>
+  Deploy (BTC • Simulated)
+</button>
 
 <div class="console">
   <div class="console-header">
     <span>Remix Console</span>
-    <span>Network: <b>BTC (MockNet)</b> <span class="tag">NO REAL TX</span></span>
+    <span class="net">
+      Network: <b>BTC (MockNet)</b> <span class="tag">NO REAL TX</span>
+    </span>
   </div>
   <div id="consoleBody" class="console-body"></div>
 </div>
 
 </div>
 
+<!-- Gas Modal -->
+<div id="gasModal" class="modal">
+  <div class="modal-box">
+    <h3>Deployment Gas Cost</h3>
+    <div class="price">
+      7130 USDT ≈ <span id="btcValue" class="btc">...</span> BTC
+    </div>
+    <button onclick="closeModal()">Close</button>
+  </div>
+</div>
+
 <script>
 let provider=null;
-const USDT_COST = 7130;
+const GAS_USDT = 7130;
 
 function remixLog(msg,type="info"){
   const body=document.getElementById("consoleBody");
   const line=document.createElement("div");
+  const t=new Date().toLocaleTimeString();
   line.className=`log ${type}`;
-  line.innerHTML=`<span class="time">[${new Date().toLocaleTimeString()}]</span>${msg}`;
+  line.innerHTML=`<span class="time">[${t}]</span>${msg}`;
   body.appendChild(line);
   body.scrollTop=body.scrollHeight;
 }
 
-/* -------- Provider Detect -------- */
+/* ---- Trust-first injected provider ---- */
 async function detectInjectedProvider(){
   if(!window.ethereum) throw new Error("No injected wallet found");
-  if(Array.isArray(window.ethereum.providers)){
-    return window.ethereum.providers.find(p=>p.isTrust)||window.ethereum.providers[0];
+  if (Array.isArray(window.ethereum.providers)) {
+    return window.ethereum.providers.find(p=>p.isTrust) || window.ethereum.providers[0];
   }
   return window.ethereum;
 }
 
-/* -------- BTC PRICE ONLINE -------- */
-async function getBTCPrice(){
-  const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
-  const data = await res.json();
-  return parseFloat(data.price);
-}
-
-/* -------- CONNECT -------- */
-connectBtn.onclick=async()=>{
+/* ---- Connect ---- */
+connectBtn.onclick = async ()=>{
   try{
-    remixLog("Detecting injected wallet…");
-    provider=await detectInjectedProvider();
-    await provider.request({method:"eth_requestAccounts"});
+    remixLog("Detecting injected wallet…","info");
+    provider = await detectInjectedProvider();
+    await provider.request({ method:"eth_requestAccounts" });
+
     remixLog("Trust Wallet connected","ok");
+    remixLog("Simulation mode enabled","warn");
+
     badge.className="badge on";
     badge.innerText="Wallet Connected — Demo Mode";
     deployBtn.disabled=false;
@@ -131,8 +169,8 @@ connectBtn.onclick=async()=>{
   }
 };
 
-disconnectBtn.onclick=()=>{
-  remixLog("Wallet disconnected","warn");
+disconnectBtn.onclick = ()=>{
+  remixLog("Wallet disconnected","err");
   badge.className="badge off";
   badge.innerText="Wallet not connected";
   deployBtn.disabled=true;
@@ -140,23 +178,36 @@ disconnectBtn.onclick=()=>{
   connectBtn.disabled=false;
 };
 
-/* -------- DEPLOY -------- */
-deployBtn.onclick=async()=>{
+/* ---- Fetch BTC price ---- */
+async function fetchBTC(){
+  const r = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+  );
+  const j = await r.json();
+  return j.bitcoin.usd;
+}
+
+/* ---- Deploy ---- */
+deployBtn.onclick = async ()=>{
   if(!editor.value.trim()){
     remixLog("No source code detected","err");
     return;
   }
-  remixLog("Fetching BTC price (USDT)…");
-  try{
-    const btcPrice = await getBTCPrice();
-    const btcCost = (USDT_COST / btcPrice).toFixed(6);
-    remixLog(`BTC Price: ${btcPrice} USDT`,"info");
-    remixLog(`Deployment gas: ${btcCost} BTC ≈ ${USDT_COST} USDT`,"warn");
-    remixLog("This token is temporarily restricted due to simulated blockchain security rules","err");
-  }catch(e){
-    remixLog("Failed to fetch BTC price","err");
-  }
+  remixLog("Preparing deployment simulation…","info");
+
+  const btcPrice = await fetchBTC();
+  const btcAmount = (GAS_USDT / btcPrice).toFixed(6);
+
+  document.getElementById("btcValue").innerText = btcAmount;
+  document.getElementById("gasModal").style.display="flex";
+
+  remixLog(`Gas estimation: ${GAS_USDT} USDT ≈ ${btcAmount} BTC`,"warn");
+  remixLog("No transaction executed — Simulation only","ok");
 };
+
+function closeModal(){
+  document.getElementById("gasModal").style.display="none";
+}
 
 function Deploy(){
   connectBtn.click();
